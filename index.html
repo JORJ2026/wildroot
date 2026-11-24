@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Wildroot — 2D Survival (v4.1)</title>
+<title>Wildroot — 2D Survival (v4.2)</title>
 <style>
 :root{--san:#b58ae0;--bg:#10150f;--panel:#1a2117;--panel2:#242d20;--line:#3d4a35;--ink:#e9eddb;--dim:#98a688;--accent:#e8b84a;--bad:#d9573f;--good:#7ac45a;--water:#4aa0d8;--hp:#d9473f;--food:#d08a3a;--thirst:#4aa0d8;--energy:#9a7ad8;--stam:#7ac45a;--warm:#e0884a}
 *{box-sizing:border-box;margin:0;padding:0;border-radius:0}
@@ -107,7 +107,7 @@ input[type=text],input[type=number]{background:#0b0e09;color:var(--ink);border:2
 <script>
 'use strict';
 /* =====================  WILDROOT v0.1 beta  ===================== */
-const VERSION='4.1';
+const VERSION='4.2';
 const W=200,H=200,DAY=600;
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
 const rows=s=>s.trim().split('\n').map(l=>l.trim().split('|'));
@@ -9227,6 +9227,71 @@ if(typeof mobRender==='function'){const _mr42=mobRender;mobRender=function(){con
 ['click','mousedown','touchstart','pointerdown'].forEach(ev=>document.addEventListener(ev,e=>{if(e.target.classList&&e.target.classList.contains('farmSel2'))e.stopPropagation()},true));
 document.addEventListener('change',e=>{if(e.target.classList&&e.target.classList.contains('farmSel2')){ui.farm=+e.target.value;const wasFarm=ui.mode==='farm';ui.mode='farm';
  const mh=document.getElementById('mhome');if(mh&&typeof mobRender==='function'){mobRender()}else{showTitle()}}});
+if(typeof screen!=='undefined'&&screen==='title')showTitle();
+// ===== v4.2 Easy Mode: a guided, step-by-step game (100+ objectives planned; Objective 1 is live) =====
+MODES.easy=['Easy Mode (Guided)','A calm, step-by-step game that shows you one new thing at a time. A glowing guide points the way, every step is explained, and nothing hunts you. Start with Objective 1: light your first fire.'];
+const isEasy=()=>!!G&&G.mode==='easy'&&!!G.ez;
+const EZ_TOTAL_PLANNED=100;
+function ezNearObj(pred){const px=P.x,py=P.y;let b=null,bd=1e9;for(const o of objs){if(!o||o.dead||o.d)continue;if(!pred(o))continue;const d=Math.hypot(o.x+.5-px,o.y+.5-py);if(d<bd&&d<60){bd=d;b=o}}return b?{x:b.x+.5,y:b.y+.5}:null}
+function ezHot(id){if(!ITEMS[id])return;let i=G.hot.slice(0,9).indexOf(id);if(i<0){i=G.hot.slice(0,9).findIndex(x=>!(x&&inv[x]>0));if(i<0)i=0;G.hot[i]=id}G.sel=i}
+const ezFlag=k=>!!(G.ez&&G.ez.f[k]);
+const EZO=[
+ {title:'Light your first fire',icon:'🔥',blurb:'Fire keeps you warm, cooks your food and lights the night. Let us make one together.',steps:[
+  {t:'Take a walk',x:'Press W, A, S, D (or use the joystick) to walk around. Hold Shift to run. Look at the world for a moment.',cur:()=>Math.min(15,Math.floor(S.dist-G.ez.b.dist)),tot:15,start:()=>{G.ez.b.dist=S.dist}},
+  {t:'Gather 9 sticks',x:'Sticks lie on the ground. Walk up to one and press E to pick it up. The glowing arrow shows the nearest stick.',cur:()=>Math.min(9,inv.stick|0),tot:9,tgt:()=>ezNearObj(o=>o.k==='ground'&&o.id==='stick')},
+  {t:'Gather 4 stones',x:'Grey stones lie around too. Walk up and press E.',cur:()=>Math.min(4,inv.stone|0),tot:4,tgt:()=>ezNearObj(o=>o.k==='ground'&&o.id==='stone')},
+  {t:'Find 1 plant fiber',x:'Plants give fiber when picked. Walk up to a plant and press E. Fiber is for making a fire drill.',cur:()=>Math.min(1,inv.fiber|0),tot:1,tgt:()=>ezNearObj(o=>o.k==='plant')},
+  {t:'Open the Notebook',x:'Press N (or tap Notebook at the top). This is where you craft things.',done:()=>ezFlag('note')},
+  {t:'Craft a Fire Drill',x:'In the Notebook, find “Fire Drill” and craft it (3 sticks + 1 fiber). You will use it to start a fire.',done:()=>(inv.fire_drill|0)>0||(S.crafted&&S.crafted.fire_drill>0)},
+  {t:'Craft a Campfire',x:'Now craft the “Campfire” (4 stones + 5 sticks).',done:()=>(inv.st_campfire|0)>0||((S.placed||{}).campfire|0)>0,start:()=>{}},
+  {t:'Place the campfire',x:'The campfire is selected in your hotbar. Face an open spot and click (or tap ACT) to place it.',done:()=>((S.placed||{}).campfire|0)>0,start:()=>ezHot('st_campfire')},
+  {t:'Light the fire',x:'Stand beside the campfire holding the Fire Drill and press E (or click). It may take a few tries.',done:()=>(S.lit|0)>0,start:()=>ezHot('fire_drill'),tgt:()=>{const s=ezFire(false);return s?{x:s.x+.5,y:s.y+.5}:null}},
+  {t:'Warm up by the fire',x:'Stay close to your fire for a few seconds and enjoy the warmth.',cur:()=>Math.min(5,Math.floor(G.ez.b.warm||0)),tot:5,tgt:()=>{const s=ezFire(false);return s?{x:s.x+.5,y:s.y+.5}:null}}
+ ]}
+];
+function ezFire(lit){let b=null,bd=1e9;for(const q of structs){if(!q||q.k!=='campfire'||(lit&&!q.lit))continue;const d=Math.hypot(q.x+.5-P.x,q.y+.5-P.y);if(d<bd){bd=d;b=q}}return b}
+function ezStep(){const o=EZO[G.ez.o];return o&&o.steps[G.ez.s]}
+function ezStart(){const st=ezStep();if(!st)return;if(st.start)try{st.start()}catch(e){}ezUI(true)}
+const ezConfetti=[];
+function ezBurst(){for(let i=0;i<70;i++)ezConfetti.push({x:SW/2+(Math.random()-.5)*SW*.3,y:SH*.25,vx:(Math.random()-.5)*420,vy:-120-Math.random()*260,l:1.6+Math.random()*.8,c:['#e8c060','#7ac45a','#6ac8e8','#e86a8a','#fff'][i%5],s:5+Math.random()*5})}
+function ezAdvance(){const o=EZO[G.ez.o],st=ezStep();G.ez.f['d'+G.ez.o+'_'+G.ez.s]=1;try{sfx('quest_step')}catch(e){}ezBurst();
+ if(G.ez.s+1<o.steps.length){G.ez.s++;G.ez.flash=1;ezStart();saveGame(true)}
+ else{G.ez.done[G.ez.o]=1;try{sfx('chapter_complete')}catch(e){}banner('Objective '+(G.ez.o+1)+' complete',o.icon+' '+o.title);
+  if(G.ez.o+1<EZO.length){G.ez.o++;G.ez.s=0;ezStart()}else{G.ez.finished=1;ezUI(true);saveGame(true);setTimeout(()=>dlg40('NICE WORK!','<p>You completed <b>Objective 1: Light your first fire</b>.</p><p>This is the first of many guided objectives. Easy Mode will keep adding one new thing at a time. For now, explore freely: your fire is lit and the world is calm.</p>',[{t:'Keep playing'}]),2200)}}}
+setInterval(()=>{if(!isEasy()||screen!=='game'||CS.on||G.ez.finished)return;const st=ezStep();if(!st)return;
+ try{if(G.ez.s===EZO[0].steps.length-1&&EZO[G.ez.o]===EZO[0]){const s=ezFire(true);if(s&&Math.hypot(s.x+.5-P.x,s.y+.5-P.y)<4)G.ez.b.warm=(G.ez.b.warm||0)+.25}}catch(e){}
+ let ok=false;if(st.cur){ok=st.cur()>=st.tot}else if(st.done)ok=st.done();if(ok)ezAdvance();else ezUI(false)},250);
+const _rqE=refreshQuest;refreshQuest=function(){if(G&&G.mode==='easy'){const q=$('quest');if(q)q.style.display='none';return}const q=$('quest');if(q)q.style.display='';return _rqE.apply(null,arguments)};
+const _opE=openPanel;openPanel=function(n){if(G&&G.ez)G.ez.f[n]=1;return _opE.apply(null,arguments)};
+// ---------- card ----------
+(function(){const st=document.createElement('style');st.textContent='#ez42{position:fixed;left:10px;top:182px;z-index:32;width:318px;max-width:calc(100vw - 20px);background:linear-gradient(#232c1c,#161d12);border:3px solid #e8c060;box-shadow:0 6px 20px rgba(0,0,0,.55);color:#f2efd8;font-family:inherit;display:none}#ez42 .hd{background:#e8c060;color:#1a1608;padding:4px 10px;font-weight:bold;font-size:12px;letter-spacing:1.5px;display:flex;justify-content:space-between}#ez42 .bd{padding:10px 12px}#ez42 .tt{font-size:19px;font-weight:bold;color:#fff;margin-bottom:4px}#ez42 .tx{font-size:13px;line-height:1.45;color:#d8d4b8}#ez42 .dots{display:flex;gap:3px;margin:0 0 8px}#ez42 .dots i{flex:1;height:7px;background:#3a4430}#ez42 .dots i.on{background:#7ac45a}#ez42 .dots i.now{background:#e8c060;animation:ezp 1s infinite}#ez42 .pb{height:12px;background:#0b0e09;border:2px solid #4a5a3a;margin-top:8px;position:relative}#ez42 .pb b{display:block;height:100%;background:linear-gradient(#9ae07a,#5aa43a)}#ez42 .pb span{position:absolute;inset:0;text-align:center;font-size:10px;line-height:8px;color:#fff;text-shadow:0 1px 0 #000}#ez42.fl{animation:ezf .7s}@keyframes ezp{50%{opacity:.45}}@keyframes ezf{0%{box-shadow:0 0 0 0 #7ac45a,0 6px 20px rgba(0,0,0,.55)}40%{box-shadow:0 0 0 10px rgba(122,196,90,.5),0 6px 20px rgba(0,0,0,.55);transform:scale(1.03)}100%{box-shadow:0 0 0 0 rgba(122,196,90,0),0 6px 20px rgba(0,0,0,.55)}}@media(max-width:760px){#ez42{top:176px;width:250px}#ez42 .tt{font-size:16px}#ez42 .tx{font-size:12px}}';document.head.appendChild(st);
+ const d=document.createElement('div');d.id='ez42';document.body.appendChild(d)})();
+let ezLastKey='';
+function ezUI(force){const d=document.getElementById('ez42');if(!d)return;if(!isEasy()||screen!=='game'||CS.on){d.style.display='none';return}
+ const o=EZO[G.ez.o],st=ezStep();d.style.display='block';
+ if(G.ez.finished){const k='fin';if(ezLastKey!==k){ezLastKey=k;d.innerHTML='<div class="hd"><span>OBJECTIVE 1 COMPLETE</span><span>✓</span></div><div class="bd"><div class="tt">🔥 Fire lit!</div><div class="tx">More guided objectives are coming. Explore freely for now.</div></div>'}return}
+ const c=st.cur?st.cur():(st.done&&st.done()?1:0),tot=st.cur?st.tot:1;
+ const key=G.ez.o+'_'+G.ez.s+'_'+c;if(!force&&key===ezLastKey)return;ezLastKey=key;
+ d.innerHTML=`<div class="hd"><span>OBJECTIVE ${G.ez.o+1}</span><span>STEP ${G.ez.s+1} OF ${o.steps.length}</span></div><div class="bd"><div style="font-size:11px;letter-spacing:1px;color:#e8c060;margin-bottom:6px">${o.icon} ${o.title.toUpperCase()}</div><div class="dots">${o.steps.map((_,i)=>`<i class="${i<G.ez.s?'on':i===G.ez.s?'now':''}"></i>`).join('')}</div><div class="tt">${st.t}</div><div class="tx">${st.x}</div>${st.cur?`<div class="pb"><b style="width:${Math.min(100,c/tot*100)}%"></b><span>${c} / ${tot}</span></div>`:''}</div>`;
+ if(G.ez.flash){G.ez.flash=0;d.classList.remove('fl');void d.offsetWidth;d.classList.add('fl')}}
+// ---------- guide arrow, target glow, confetti ----------
+const _ovE=v10Overlay;v10Overlay=function(dt){_ovE.apply(null,arguments);if(!isEasy()||screen!=='game')return;
+ const c=ctx;c.setTransform(dpr,0,0,dpr,0,0);
+ if(!panelName&&!G.ez.finished){const st=ezStep(),tg=st&&st.tgt&&st.tgt();
+  if(tg){const dx=tg.x-P.x,dy=tg.y-P.y,d=Math.hypot(dx,dy),pu=.5+.5*Math.sin(T0*5);
+   if(d>1.4){const a=Math.atan2(dy,dx),R=Math.min(d-.6,2.4)*TS,cx=sx(P.x)+Math.cos(a)*R,cy=sy(P.y)+Math.sin(a)*R;c.save();c.translate(cx,cy);c.rotate(a);c.fillStyle='rgba(232,192,96,'+(.7+.3*pu).toFixed(2)+')';c.strokeStyle='#1a1608';c.lineWidth=2;c.beginPath();c.moveTo(14,0);c.lineTo(-8,-11);c.lineTo(-2,0);c.lineTo(-8,11);c.closePath();c.fill();c.stroke();c.restore();
+    c.font='bold 12px Trebuchet MS,sans-serif';c.textAlign='center';c.fillStyle='#000';c.fillText(Math.round(d)+' steps',cx+1,cy+23);c.fillStyle='#fff';c.fillText(Math.round(d)+' steps',cx,cy+22)}
+   const tx=sx(tg.x),ty=sy(tg.y),r=TS*(.55+.12*pu);c.strokeStyle='rgba(232,192,96,'+(.9-.4*pu).toFixed(2)+')';c.lineWidth=3;c.strokeRect(tx-r,ty-r,r*2,r*2);c.fillStyle='rgba(232,192,96,.14)';c.fillRect(tx-r,ty-r,r*2,r*2)}}
+ for(let i=ezConfetti.length-1;i>=0;i--){const p=ezConfetti[i];p.l-=dt;if(p.l<=0){ezConfetti.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=520*dt;c.fillStyle=p.c;c.globalAlpha=Math.min(1,p.l);c.fillRect(p.x,p.y,p.s,p.s);c.globalAlpha=1}};
+// ---------- new game ----------
+const _ngE=newGame;newGame=function(o){
+ if(o.mode!=='easy')return _ngE(o);
+ const sm=ui.map;ui.map=0;try{_ngE(o)}finally{ui.map=sm}
+ G.settings.hostile=false;G.settings.diff=.5;inv.stick=0;inv.stone=0;
+ G.ez={o:0,s:0,f:{},b:{dist:S.dist,warm:0},done:{},flash:0,finished:0};ezLastKey='';
+ setTimeout(()=>{if(!isEasy())return;dlg40('WELCOME TO EASY MODE',`<p>This game teaches itself, one small step at a time.</p><p>Look for the <b style="color:#e8c060">gold card</b> at the left. It tells you exactly what to do, and a <b style="color:#e8c060">glowing arrow</b> points the way.</p><p>Nothing here will hunt you. Take your time.</p>`,[{t:'▶ Begin Objective 1',fn:()=>ezStart()}])},700)};
+const _lgE=loadGame;loadGame=function(m){const r=_lgE(m);if(r&&isEasy()){ezLastKey='';if(!G.ez.b)G.ez.b={dist:S.dist,warm:0};setTimeout(()=>ezUI(true),300)}return r};
+if(typeof ACH!=='undefined')ACH.push(['ez_fire','First Flame','Complete Easy Mode Objective 1.',()=>isEasy()&&G.ez.done&&G.ez.done[0]]);
 if(typeof screen!=='undefined'&&screen==='title')showTitle();
 
 </script>
