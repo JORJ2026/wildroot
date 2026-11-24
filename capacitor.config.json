@@ -1,0 +1,12 @@
+{
+  "appId": "io.github.wildroot.game",
+  "appName": "Wildroot",
+  "webDir": "www",
+  "backgroundColor": "#0c120a",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}

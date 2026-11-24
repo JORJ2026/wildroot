@@ -1,0 +1,98 @@
+{
+  "name": "wildroot",
+  "version": "4.18.0",
+  "description": "Wildroot, a 2D survival game",
+  "main": "electron/main.js",
+  "homepage": "https://github.com",
+  "author": {
+    "name": "Wildroot",
+    "email": "noreply@example.com"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "www": "node scripts/prepare-www.js",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "io.github.wildroot.game",
+    "productName": "Wildroot",
+    "copyright": "Copyright (c) 2026 Jeck",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "index.html",
+      "manifest.webmanifest",
+      "icons/**",
+      "electron/**",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Wildroot",
+      "artifactName": "Wildroot-Windows-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "Wildroot-Windows-Portable.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.games",
+      "icon": "build/icon.icns"
+    },
+    "dmg": {
+      "artifactName": "Wildroot-macOS-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Game",
+      "icon": "build/icon.png",
+      "synopsis": "2D survival game"
+    },
+    "appImage": {
+      "artifactName": "Wildroot-Linux.${ext}"
+    },
+    "deb": {
+      "artifactName": "Wildroot-Linux.${ext}"
+    }
+  }
+}
